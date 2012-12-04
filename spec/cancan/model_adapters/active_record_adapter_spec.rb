@@ -4,6 +4,7 @@ if ENV["MODEL_ADAPTER"].nil? || ENV["MODEL_ADAPTER"] == "active_record"
   ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :database => ":memory:")
 
   describe CanCan::ModelAdapters::ActiveRecordAdapter do
+    
     with_model :category do
       table do |t|
         t.boolean "visible"
@@ -25,6 +26,7 @@ if ENV["MODEL_ADAPTER"].nil? || ENV["MODEL_ADAPTER"] == "active_record"
       model do
         belongs_to :category
         has_many :comments
+        has_many :tags
         belongs_to :user
       end
     end
@@ -32,6 +34,16 @@ if ENV["MODEL_ADAPTER"].nil? || ENV["MODEL_ADAPTER"] == "active_record"
     with_model :comment do
       table do |t|
         t.boolean "spam"
+        t.integer "article_id"
+      end
+      model do
+        belongs_to :article
+      end
+    end
+
+    with_model :tag do
+      table do |t|
+        t.string "tag"
         t.integer "article_id"
       end
       model do
@@ -94,6 +106,20 @@ if ENV["MODEL_ADAPTER"].nil? || ENV["MODEL_ADAPTER"] == "active_record"
       article3 = Article.create!(:published => false, :secret => true)
       article4 = Article.create!(:published => false, :secret => false)
       Article.accessible_by(@ability).should == [article1, article2, article3]
+    end
+
+    it "should merge multiple nested conditions" do
+      @ability.can :read, Article, :comments => {:spam => true}
+      @ability.can :read, Article, :tags => {:tag => "awesome"}
+      article1 = Article.create!(:published => true, :secret => false)
+      article2 = Article.create!(:published => true, :secret => true)
+      article3 = Article.create!(:published => false, :secret => true)
+      article4 = Article.create!(:published => false, :secret => false)
+      comment1 = Comment.create!(:article => article1, :spam => true)
+      comment2 = Comment.create!(:article => article2, :spam => false)
+      tag1 = Tag.create!(:article => article3, :tag => "awesome")
+      tag2 = Tag.create!(:article => article4, :tag => "terrible")
+      Article.accessible_by(@ability).should == [article1, article3]
     end
 
     it "should fetch only the articles that are published and not secret" do
