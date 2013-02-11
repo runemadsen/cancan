@@ -108,7 +108,16 @@ if ENV["MODEL_ADAPTER"].nil? || ENV["MODEL_ADAPTER"] == "active_record"
       Article.accessible_by(@ability).should == [article1, article2, article3]
     end
 
-    it "should merge multiple nested conditions" do
+    it "should fetch multiple conditions with OR instead of AND" do
+      @ability.can :read, Article, :published => true
+      @ability.can :read, Article, :secret => true
+      article1 = Article.create!(:published => true, :secret => false)
+      article2 = Article.create!(:published => false, :secret => true)
+      article3 = Article.create!(:published => false, :secret => false)
+      Article.accessible_by(@ability).should == [article1, article2]
+    end
+
+    it "should fetch multiple nested conditions with OR instead of AND" do
       @ability.can :read, Article, :comments => {:spam => true}
       @ability.can :read, Article, :tags => {:tag => "awesome"}
       article1 = Article.create!(:published => true, :secret => false)
